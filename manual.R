@@ -91,5 +91,11 @@ draw.cluster(9, data = old$data, clusters)
 # compare
 # plot.cluster(c("b", "p", "f") , old$data, sounds)
 
+#' ### phones per village
+
+uniquePhones <- as.character(sort(unique(old$raw$ipa)))
+phoneFreq <- apply(old$data, 1, function(x) { table(x)[uniquePhones] } )
+phoneFreq[is.na(phoneFreq)] <- 0
+rownames(phoneFreq) <- uniquePhones
 
 
