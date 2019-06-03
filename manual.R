@@ -91,5 +91,39 @@ draw.cluster(9, data = old$data, clusters)
 # compare
 # plot.cluster(c("b", "p", "f") , old$data, sounds)
 
+#' ### compare old with new
 
+new <- read_mrhsa("sources/juengere-generation-ipa.tsv")
+
+compare <- function(sound) {
+	
+	new_index <- which(colnames(new$data) ==  sound)
+	old_index <- which(colnames(old$data) ==  sound)
+	
+	if (is.null(new_index)) {
+		warning("sound is not available in young generation")
+	} else {
+	
+		new_sound <- new$data[,sound]
+		old_sound <- old$data[,sound][names(new_sound)]
+		
+		return(cbind(old = old_sound, new = new_sound))
+	}
+}
+
+s <- qlcMatrix::sim.obs(t(old$data), method="weighted")
+
+system_stability <- function(sound, village, data = old$data, sim = s) {
+	
+	sim_to_same <- sim[sound, which(data[village, ] == data[village, sound])]
+	
+	others <- table(data[ , sound])
+	
+	stat <- sapply(names(others), function(x) {
+		sim_to_other <- sim[sound, which(data[village,] == x)]
+		t.test(sim_to_same,	sim_to_other)$statistic
+	})
+	
+	return(cbind(frequency = others, statistic = stat))
+}
 
