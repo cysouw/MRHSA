@@ -127,3 +127,11 @@ system_stability <- function(sound, village, data = old$data, sim = s) {
 	return(cbind(frequency = others, statistic = stat))
 }
 
+#' ### phones per village
+
+uniquePhones <- as.character(sort(unique(old$raw$ipa)))
+phoneFreq <- apply(old$data, 1, function(x) { table(x)[uniquePhones] } )
+phoneFreq[is.na(phoneFreq)] <- 0
+rownames(phoneFreq) <- uniquePhones
+
+
