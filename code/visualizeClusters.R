@@ -7,7 +7,7 @@ draw.cluster <- function(cluster, data, clusters, window = TRUE) {
 	columns <- data[ , clusters %in% cluster]				
 	qlcVisualize::limage(columns
 						, col = rainbow(8)
-						, order = "mds"
+						, order = "R2E"
 						, method = "weighted"
 						, show.remaining = TRUE
 						, cex.axis = .5

@@ -20,7 +20,8 @@
 # special function adapted to the details of the data
 source("code/readData.R")
 
-old <- read_mrhsa("sources/aeltere-generation-ipa.tsv")
+loc <- read_loc("sources/mrhsa-gid-wkt.tsv")
+old <- read_mrhsa("sources/aeltere-generation-ipa.tsv", loc)
 
 # help function for visualisation
 # - draw.cluster based on "limage"
