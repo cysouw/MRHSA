@@ -20,8 +20,8 @@
 # special function adapted to the details of the data
 source("code/readData.R")
 
-loc <- read_loc("sources/mrhsa-gid-wkt.tsv")
-old <- read_mrhsa("sources/aeltere-generation-ipa.tsv", loc)
+loc <- read_loc("sources/mrhsa/mrhsa-gid-wkt.tsv")
+old <- read_mrhsa("sources/mrhsa/aeltere-generation-ipa.tsv", loc)
 
 # help function for visualisation
 # - draw.cluster based on "limage"
@@ -94,7 +94,7 @@ draw.cluster(9, data = old$data, clusters)
 
 #' ### compare old with new
 
-new <- read_mrhsa("sources/juengere-generation-ipa.tsv")
+new <- read_mrhsa("sources/mrhsa/juengere-generation-ipa.tsv")
 
 compare <- function(sound) {
 	

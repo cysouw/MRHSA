@@ -36,5 +36,17 @@ select_pairs <- function(graphdist, distance, size) {
 	
 }
 
+source("code/readData.R")
+
+loc <- read_loc("sources/mrhsa/mrhsa-gid-wkt.tsv")
+old <- read_mrhsa("sources/mrhsa/aeltere-generation-ipa.tsv", loc)
+
 d <- make_graphdist(old)
 s <- select_pairs(d,2,30)
+
+phoible <- read.csv("sources/phoible/cldf/parameters.csv")
+
+# remove diacritica to match phones to phoible
+
+old$data <- gsub("͡","",old$data)
+old$data <- gsub("̠","",old$data)
