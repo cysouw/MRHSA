@@ -50,3 +50,9 @@ phoible <- read.csv("sources/phoible/cldf/parameters.csv")
 
 old$data <- gsub("͡","",old$data)
 old$data <- gsub("̠","",old$data)
+
+avail <- table(old$data[,5])
+sel <- phoible$Name %in% names(avail)
+tmp <- phoible[sel,-c(1:4)]
+rownames(tmp) <- as.character(phoible$Name)[sel]
+t(tmp)

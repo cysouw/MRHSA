@@ -94,7 +94,7 @@ draw.cluster(9, data = old$data, clusters)
 
 #' ### compare old with new
 
-new <- read_mrhsa("sources/mrhsa/juengere-generation-ipa.tsv")
+new <- read_mrhsa("sources/mrhsa/juengere-generation-ipa.tsv", loc)
 
 compare <- function(sound) {
 	
@@ -114,15 +114,20 @@ compare <- function(sound) {
 
 s <- qlcMatrix::sim.obs(t(old$data), method="weighted")
 
-system_stability <- function(sound, village, data = old$data, sim = s) {
+system_stability <- function(sound, village, data = old$data, sim = s, boundary = .3) {
 	
 	sim_to_same <- sim[sound, which(data[village, ] == data[village, sound])]
+	sim_to_same <- sim_to_same[sim_to_same > boundary]
 	
-	others <- table(data[ , sound])
-	
+	others <- table(data[ , sound])	
 	stat <- sapply(names(others), function(x) {
 		sim_to_other <- sim[sound, which(data[village,] == x)]
-		t.test(sim_to_same,	sim_to_other)$statistic
+		sim_to_other <- sim_to_other[sim_to_other > boundary]
+		if (length(sim_to_other)<=1 | length(sim_to_same)<=1) {
+			NA
+		} else {
+			t.test(sim_to_same,	sim_to_other)$statistic
+		}
 	})
 	
 	return(cbind(frequency = others, statistic = stat))
