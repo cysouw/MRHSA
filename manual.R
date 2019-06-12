@@ -97,19 +97,11 @@ draw.cluster(9, data = old$data, clusters)
 new <- read_mrhsa("sources/mrhsa/juengere-generation-ipa.tsv", loc)
 
 compare <- function(sound) {
-	
-	new_index <- which(colnames(new$data) ==  sound)
-	old_index <- which(colnames(old$data) ==  sound)
-	
-	if (is.null(new_index)) {
-		warning("sound is not available in young generation")
-	} else {
-	
-		new_sound <- new$data[,sound]
-		old_sound <- old$data[,sound][names(new_sound)]
 		
-		return(cbind(old = old_sound, new = new_sound))
-	}
+	new_sound <- new$data[,sound]
+	old_sound <- old$data[names(new_sound),sound]
+		
+	return(table(old_sound,new_sound))
 }
 
 s <- qlcMatrix::sim.obs(t(old$data), method="weighted")
