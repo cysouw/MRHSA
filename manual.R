@@ -94,15 +94,6 @@ draw.cluster(9, data = old$data, clusters)
 
 #' ### compare old with new
 
-new <- read_mrhsa("sources/mrhsa/juengere-generation-ipa.tsv", loc)
-
-compare <- function(sound) {
-		
-	new_sound <- new$data[,sound]
-	old_sound <- old$data[names(new_sound),sound]
-		
-	return(table(old_sound,new_sound))
-}
 
 s <- qlcMatrix::sim.obs(t(old$data), method="weighted")
 

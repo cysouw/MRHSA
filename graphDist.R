@@ -1,5 +1,9 @@
-library(deldir)
-library(sna)
+require(deldir)
+require(sna)
+require(corHMM)
+require(qlcMatrix)
+require(qlcVisualize)
+require(markovchain)
 
 make_graphdist <- function(data) {
 	
@@ -14,6 +18,7 @@ make_graphdist <- function(data) {
 	attr(edges,"vnames") <- rownames(data$data)
 
 	graphdist <- sna::geodist(edges)[[2]]
+	rownames(graphdist) <- colnames(graphdist) <- rownames(data$data)
 
 	return(graphdist)
 	
@@ -30,14 +35,14 @@ sample_neighbor <- function(x) {
 select_pairs <- function(graphdist, distance, size) {
 	
 	graphdist[graphdist != distance] <- 0
-	selection <- sample(dim(graphdist)[1], size)
+	selection <- sample(nrow(graphdist), size)
 #	selection <- sample(which(old$loc[,1]<7.5), size)
 	neighbor <- apply(graphdist[selection,], 1, sample_neighbor)
 	return(cbind(selection, neighbor))
 	
 }
 
-# MASLOVA
+# Maslova estimation
 
 p <- function(x, feature, sounds, graph, dist = 1, samplesize = 50) {
 
@@ -82,38 +87,136 @@ attempts_at_dist <- function(distance, nattempts = 20, ...) {
 
 } 
 
+maslova_pair_estimates <- function(feature, sounds, full = FALSE) {
+	
+	estimates <- sapply(1:5
+			, attempts_at_dist
+			, feature = feature
+			, sounds = sounds
+			, graph = d[names(feature),names(feature)]
+			)
+	
+	if (full) {
+		return(estimates)
+	} else {
+		tAB <- lm(estimates["pAB",] ~ 0 + c(1:5))$coefficients
+		tBA <- lm(estimates["pBA",] ~ 0 + c(1:5))$coefficients
+
+		return(c(tAB,tBA))
+	}
+}
+
+maslova_estimates <- function(feature) {
+	
+	sounds <- names(table(feature))
+	s <- length(sounds)
+	result <- matrix(NA, s, s, dimnames = list(sounds, sounds))
+	
+	for ( soundA in 1:(s-1) ) {
+		for ( soundB in (soundA+1):s ) {
+			selectSounds <- c(sounds[soundA], sounds[soundB])
+			estims <- maslova_pair_estimates(feature, selectSounds)
+			result[soundA, soundB] <- estims[1]
+			result[soundB, soundA] <- estims[2]
+		}
+	}
+
+	return(result)
+}
+
+markov_estimates <- function(feature, root = NA) {
+	
+	# village tree based on general similarity, subsetted to selected villages
+	tree <- ape::nj(as.dist(1-qlcMatrix::sim.obs(old$data[names(feature),])))
+	# branch lengths fixed to 1 to allow comparability with graph distance
+	tree$edge.length <- rep(1, times = length(tree$edge.length))
+	# optionally reroot
+	if (!is.na(root)) {
+		tree <- root(tree, root)
+	}
+	
+	# specail dataformat as expected by rayDISC
+	feature[feature == "-"] <- "_"
+	data <- cbind(names(feature), feature)
+	data[is.na(data)] <- "?"
+
+	model <- corHMM::rayDISC(tree, data, model = "ARD", node.state = "marginal")
+
+	result <- model$solution
+	rownames(result)[rownames(result) == "_"] <- "-"
+	colnames(result)[colnames(result) == "_"] <- "-"
+	return(result)
+}
+
+clean_feature <- function(feature, cutoff = 10, long = NA) {
+
+	feature <- old$data[,feature]
+	names(feature) <- rownames(old$data)
+	
+	if (is.numeric(long)) {
+		feature <- feature[old$loc[,1] < long]
+	}
+	
+	values <- table(feature)
+	rare_values <- which(values < cutoff)
+	feature[feature %in% names(values)[rare_values]] <- NA
+	return(feature)
+}
+
+compare <- function(sound) {
+		
+	if (is.numeric(sound)) {
+		sound <- colnames(old$data)[sound]
+	}
+	
+	if (sound %in% colnames(new$data)) {
+		
+		new_sound <- new$data[,sound]
+		old_sound <- old$data[names(new_sound),sound]
+	
+		freq <- table(old_sound,new_sound)
+		perc <- round(prop.table(freq,1),3)*100
+	
+		return(list(sound = sound, frequency = freq, percentage = perc))
+	
+	} else {
+		warning("Sound is not available in data for younger generation")
+	}
+}
+
+stable <- function(model) {
+	
+	diag(model) <- -rowSums(model, na.rm = TRUE)
+	model[is.na(model)] <- 0
+	Q <- new("ctmc", generator = model)
+	markovchain::steadyStates(Q)
+	
+}
+
+# ==========================
+
 source("code/readData.R")
 
 loc <- read_loc("sources/mrhsa/mrhsa-gid-wkt.tsv")
 old <- read_mrhsa("sources/mrhsa/aeltere-generation-ipa.tsv", loc)
+new <- read_mrhsa("sources/mrhsa/juengere-generation-ipa.tsv", loc)
 
+# graph-based geographical distance between villages
 d <- make_graphdist(old)
 
-estimates <- sapply(1:5
-			, attempts_at_dist
-			, feature = old$data[,"gibt_b_(52.5)"]
-			, sounds = c("p","-")
-			, graph = d
-			)
+sound <- 215
+qlcVisualize::lmap(old$loc, old$data[,sound], levels = .6)
+compare(sound)
 
-estimates
-plot(c(0,estimates["pAB",]),c(0,estimates["pBA",]))
-lm(estimates["pBA",] ~ 0 + estimates["pAB",])$coefficients
+feature <- clean_feature(sound, 20)
+table(feature)/sum(table(feature))
 
-plot(old$loc, type = "n")
-text(old$loc, labels = old$data[,"gibt_b_(52.5)"])
+(maslova_estimates(feature) -> q)
+(markov_estimates(feature) -> r)
 
-compare("Kupfer_p_(98.3)")
-compare("Pfennig_p_(30.4)")
-compare("pfeifen_p_(171.2)")
+stable(q)
+stable(t(q))
 
-compare("gestorben_b_(140.3)")
-compare("aufräumen_p_(27.31)")
-
-compare("fünfzig_f_(2.3)")
-[1] "ab_b_(91.5)"         "Arbeit_b_(51.3)"     "Gabel_b_(33.2)"      "geben_b_(28.3)"     
-[5] "gestorben_b_(140.3)" "gibt_b_(52.5)"       "Körbe_b_(106.3)"     "taub_b_(128.2)"     
-[9] "Taube_b_(166.5)"   
 
 # PHOIBLE
 
@@ -124,8 +227,10 @@ phoible <- read.csv("sources/phoible/cldf/parameters.csv")
 old$data <- gsub("͡","",old$data)
 old$data <- gsub("̠","",old$data)
 
-avail <- table(old$data[,5])
+avail <- table(old$data[,sound])
 sel <- phoible$Name %in% names(avail)
 tmp <- phoible[sel,-c(1:4)]
 rownames(tmp) <- as.character(phoible$Name)[sel]
-t(tmp)
+diff_test <- function(feat){max(table(feat)/nrow(tmp)) != 1}
+interesting <- which(apply(tmp, 2, diff_test))
+
